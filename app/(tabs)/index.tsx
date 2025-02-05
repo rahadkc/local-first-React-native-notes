@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -12,8 +13,10 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { StyledButton } from '@/components/StyledButton';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { db } from '@/databases/firebase-config';
 import { formatDate } from '@/scripts/utils';
 import * as SQLite from 'expo-sqlite';
+import { onValue, ref, remove, set, update } from 'firebase/database';
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMergeableStore } from 'tinybase/mergeable-store';
@@ -35,11 +38,85 @@ type NoteType = { id: string; text: string; done: boolean; createdAt: string };
 
 const generatedId = () => `note-${Date.now()}`;
 
+export default function HomeScreen() {
+  const [note, setNote] = useState('');
+  const store = useCreateMergeableStore(() => createMergeableStore());
+
+  // useCreatePersister(
+  //   store,
+  //   (store) => createExpoSqlitePersister(store, SQLite.openDatabaseSync('notes.db')),
+  //   [],
+  //   //@ts-ignore
+  //   (persister) => persister.load().then(persister.startAutoSave),
+  // );
+
+  useEffect(() => {
+    const persister = createExpoSqlitePersister(
+      store,
+      SQLite.openDatabaseSync(`${TABLE_NAME}.db`),
+    );
+
+    persister.load().then(persister.startAutoSave);
+
+    return () => {
+      persister.stopAutoSave();
+    };
+  }, [store]);
+
+  useProvideStore(TABLE_NAME, store);
+
+  const handleAddNote = async () => {
+    const noteId = generatedId();
+
+    const newNote = {
+      [TEXT_CELL]: note.trim(),
+      [DATE_CELL]: `${new Date()}`,
+      [DONE_CELL]: false,
+    };
+
+    try {
+      store?.setRow(TABLE_NAME, noteId, newNote);
+      await set(ref(db, `notes/${noteId}`), newNote);
+      setNote('');
+    } catch (_error) {
+      Alert.alert('Error', 'Failed to add note', [{ text: 'OK' }]);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ThemedText type="title" style={styles.screenTitle}>
+        Notes
+      </ThemedText>
+
+      <View style={styles.inputContainer}>
+        <MultilineTextInput
+          placeholder="Type your note here..."
+          value={note}
+          onChangeText={setNote}
+        />
+
+        <StyledButton
+          title="Add Note"
+          onPress={handleAddNote}
+          disabled={!note.trim()}
+          buttonStyle={{
+            backgroundColor: '#272727',
+          }}
+          textStyle={{ fontSize: 18 }}
+        />
+      </View>
+
+      <NoteList />
+    </SafeAreaView>
+  );
+}
+
 function NoteList() {
   const store = useStore(TABLE_NAME);
   const notes = useTable(TABLE_NAME, store);
 
-  const toggleComplete = (id: string) => {
+  const toggleComplete = async (id: string) => {
     const selectedRow = store?.getRow(TABLE_NAME, id);
     if (!selectedRow) {
       return;
@@ -48,15 +125,24 @@ function NoteList() {
     //   ...selectedRow,
     //   [DONE_CELL]: !selectedRow[DONE_CELL],
     // });
-
-    store?.setCell(TABLE_NAME, id, DONE_CELL, !selectedRow[DONE_CELL]);
+    try {
+      await update(ref(db, `${TABLE_NAME}/${id}`), { done: !selectedRow[DONE_CELL] });
+      store?.setCell(TABLE_NAME, id, DONE_CELL, !selectedRow[DONE_CELL]);
+    } catch (_error) {
+      Alert.alert('Error', 'Failed to update note', [{ text: 'OK' }]);
+    }
   };
-  const onDelete = (id: string) => {
+  const onDelete = async (id: string) => {
     const selectedRow = store?.getRow(TABLE_NAME, id);
     if (!selectedRow) {
       return;
     }
-    store?.delRow(TABLE_NAME, id);
+    try {
+      store?.delRow(TABLE_NAME, id);
+      await remove(ref(db, `${TABLE_NAME}/${id}`));
+    } catch (_error) {
+      Alert.alert('Error', 'Failed to delete note', [{ text: 'OK' }]);
+    }
   };
 
   return (
@@ -96,74 +182,6 @@ function NoteList() {
         }}
       />
     </View>
-  );
-}
-
-export default function HomeScreen() {
-  const [note, setNote] = useState('');
-  const store = useCreateMergeableStore(() => createMergeableStore());
-
-  // useCreatePersister(
-  //   store,
-  //   (store) => createExpoSqlitePersister(store, SQLite.openDatabaseSync('notes.db')),
-  //   [],
-  //   //@ts-ignore
-  //   (persister) => persister.load().then(persister.startAutoSave),
-  // );
-
-  useEffect(() => {
-    const persister = createExpoSqlitePersister(
-      store,
-      SQLite.openDatabaseSync(`${TABLE_NAME}.db`),
-    );
-
-    persister.load().then(persister.startAutoSave);
-
-    return () => {
-      persister.stopAutoSave();
-    };
-  }, [store]);
-
-  useProvideStore(TABLE_NAME, store);
-
-  const handleAddNote = () => {
-    const noteId = generatedId();
-
-    const newNote = {
-      [TEXT_CELL]: note.trim(),
-      [DATE_CELL]: `${new Date()}`,
-      [DONE_CELL]: false,
-    };
-    store?.setRow(TABLE_NAME, noteId, newNote);
-    setNote('');
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ThemedText type="title" style={styles.screenTitle}>
-        Notes
-      </ThemedText>
-
-      <View style={styles.inputContainer}>
-        <MultilineTextInput
-          placeholder="Type your note here..."
-          value={note}
-          onChangeText={setNote}
-        />
-
-        <StyledButton
-          title="Add Note"
-          onPress={handleAddNote}
-          disabled={!note.trim()}
-          buttonStyle={{
-            backgroundColor: '#272727',
-          }}
-          textStyle={{ fontSize: 18 }}
-        />
-      </View>
-
-      <NoteList />
-    </SafeAreaView>
   );
 }
 
@@ -208,7 +226,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3.84,
     elevation: 5,
-    borderRadius: 8,
+    // borderRadius: 8,
   },
   screenTitle: {
     textAlign: 'left',
