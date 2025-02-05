@@ -63,6 +63,21 @@ export default function HomeScreen() {
     };
   }, [store]);
 
+  useEffect(() => {
+    const notesRef = ref(db, TABLE_NAME);
+
+    const unsubscribe = onValue(notesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        store?.setTable(TABLE_NAME, data);
+        return;
+      }
+      store?.delTable(TABLE_NAME);
+    });
+
+    return () => unsubscribe();
+  }, [store]);
+
   useProvideStore(TABLE_NAME, store);
 
   const handleAddNote = async () => {
