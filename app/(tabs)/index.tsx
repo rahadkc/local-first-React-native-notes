@@ -1,15 +1,15 @@
 import {
   Alert,
   FlatList,
+  type NativeSyntheticEvent,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
+  type TextInputKeyPressEventData,
   View,
 } from 'react-native';
 
 import { MultilineTextInput } from '@/components/MultiLineTextInput';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { StyledButton } from '@/components/StyledButton';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -17,10 +17,13 @@ import { db } from '@/databases/firebase-config';
 import { formatDate } from '@/scripts/utils';
 import * as SQLite from 'expo-sqlite';
 import { onValue, ref, remove, set, update } from 'firebase/database';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMergeableStore } from 'tinybase/mergeable-store';
 import { createExpoSqlitePersister } from 'tinybase/persisters/persister-expo-sqlite';
+
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useCreateMergeableStore,
   useCreatePersister,
@@ -33,8 +36,6 @@ const TABLE_NAME = 'notes';
 const TEXT_CELL = 'text';
 const DATE_CELL = 'createdAt';
 const DONE_CELL = 'done';
-
-type NoteType = { id: string; text: string; done: boolean; createdAt: string };
 
 const generatedId = () => `note-${Date.now()}`;
 
@@ -90,11 +91,17 @@ export default function HomeScreen() {
     };
 
     try {
+      await set(ref(db, `${TABLE_NAME}/${noteId}`), newNote);
       store?.setRow(TABLE_NAME, noteId, newNote);
-      await set(ref(db, `notes/${noteId}`), newNote);
       setNote('');
     } catch (_error) {
       Alert.alert('Error', 'Failed to add note', [{ text: 'OK' }]);
+    }
+  };
+
+  const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    if (e.nativeEvent.key === 'Enter') {
+      handleAddNote();
     }
   };
 
@@ -103,12 +110,12 @@ export default function HomeScreen() {
       <ThemedText type="title" style={styles.screenTitle}>
         Notes
       </ThemedText>
-
       <View style={styles.inputContainer}>
         <MultilineTextInput
           placeholder="Type your note here..."
           value={note}
           onChangeText={setNote}
+          // onKeyPress={handleKeyPress}
         />
 
         <StyledButton
@@ -122,12 +129,15 @@ export default function HomeScreen() {
         />
       </View>
 
-      <NoteList />
+      <GestureHandlerRootView>
+        {/* <NoteList /> */}
+        <MemorizedNoteList />
+      </GestureHandlerRootView>
     </SafeAreaView>
   );
 }
 
-function NoteList() {
+const MemorizedNoteList = memo(function NoteList() {
   const store = useStore(TABLE_NAME);
   const notes = useTable(TABLE_NAME, store);
 
@@ -160,45 +170,71 @@ function NoteList() {
     }
   };
 
+  // Render delete action on swipe
+  const renderRightActions = (id: string) => (
+    <Pressable onPress={() => onDelete(id)} style={styles.delButton}>
+      <ThemedText style={styles.deleteText}>Delete</ThemedText>
+    </Pressable>
+  );
+
+  const sortedArray = Object.entries(notes).sort(
+    (a, b) => Number(b[0].split('-')[1]) - Number(a[0].split('-')[1]),
+  );
+
   return (
     <View style={styles.listContainer}>
       <FlatList
-        data={Object.entries(notes)}
+        data={sortedArray}
         keyExtractor={([id]) => id}
         ListFooterComponent={<View style={{ height: 20 }} />}
         showsVerticalScrollIndicator={false}
         renderItem={({ item: [id, note] }) => {
           return (
-            <ThemedView style={styles.listItem}>
-              <ThemedView>
-                <Pressable
-                  onPress={() => toggleComplete(id)}
-                  style={styles.titleContainer}
-                >
-                  <ThemedText
-                    style={[
-                      styles.title,
-                      (note[DONE_CELL] as boolean) && styles.completed,
-                    ]}
+            <Swipeable
+              renderRightActions={() => renderRightActions(id)}
+              // renderLeftActions={() => renderLeftActions(item.id)}
+              dragOffsetFromLeftEdge={10}
+              containerStyle={{
+                flex: 1,
+                backgroundColor: '#fbfbfb',
+                marginBottom: 2,
+              }}
+              childrenContainerStyle={{
+                backgroundColor: 'blue',
+                height: '100%',
+              }}
+            >
+              <ThemedView style={styles.listItem}>
+                <ThemedView>
+                  <Pressable
+                    onPress={() => toggleComplete(id)}
+                    style={styles.titleContainer}
                   >
-                    {note[TEXT_CELL]}
+                    <ThemedText
+                      style={[
+                        styles.title,
+                        (note[DONE_CELL] as boolean) && styles.completed,
+                      ]}
+                    >
+                      {note[TEXT_CELL]}
+                    </ThemedText>
+                  </Pressable>
+                  <ThemedText style={styles.time}>
+                    {formatDate(note[DATE_CELL] as string)}
                   </ThemedText>
-                </Pressable>
-                <ThemedText style={styles.time}>
-                  {formatDate(note[DATE_CELL] as string)}
-                </ThemedText>
-              </ThemedView>
+                </ThemedView>
 
-              <Pressable onPress={() => onDelete(id)} style={styles.deleteButton}>
-                <ThemedText style={styles.deleteIcon}>❌</ThemedText>
-              </Pressable>
-            </ThemedView>
+                <Pressable onPress={() => onDelete(id)} style={styles.deleteButton}>
+                  <ThemedText style={styles.deleteIcon}>❌</ThemedText>
+                </Pressable>
+              </ThemedView>
+            </Swipeable>
           );
         }}
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -227,20 +263,26 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 20,
     textAlign: 'left',
+    columnGap: 10,
+    // gap: 10,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 10,
-    marginBottom: 10,
-    // backgroundColor: '#F5F5F5', // Ensure background color is set
+    // marginBottom: 10,
+    // backgroundColor: 'pink', // Ensure background color is set
     // Add shadow properties to the view box
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3.84,
     elevation: 5,
+    width: '100%',
+    // height: 80,
+    // height: '100%',
+    // position: 'relative',
     // borderRadius: 8,
   },
   screenTitle: {
@@ -272,5 +314,24 @@ const styles = StyleSheet.create({
   deleteIcon: {
     fontSize: 10,
     color: 'maroon',
+  },
+  delButton: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+  },
+  bookmarkButton: {
+    backgroundColor: 'skyblue',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+  },
+  deleteText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

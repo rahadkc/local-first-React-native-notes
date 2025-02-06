@@ -1,5 +1,6 @@
 import type React from 'react';
 import {
+  type ButtonProps,
   StyleSheet,
   Text,
   type TextStyle,
