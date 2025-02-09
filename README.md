@@ -38,10 +38,14 @@ This is a **React Native** offline-first task management app using **TinyBase**,
 - **Firebase Realtime Database**
 - **Expo SQLite**
 
+## App Preview
+![App Preview](https://github.com/rahadkc/local-first-React-native-notes/blob/main/assets/images/app-preview.gif)
+
 ## License
 MIT License
 
 ---
 
 > **Note:** Update Firebase config in your project before running the app and include `.env` values.
+
 
