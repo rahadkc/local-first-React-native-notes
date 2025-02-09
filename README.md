@@ -1,50 +1,47 @@
-# Welcome to your Expo app 👋
+# Local-Test-Own
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+This is a **React Native** offline-first task management app using **TinyBase**, **Firebase Realtime Database**, and **Expo SQLite**. It supports real-time sync across devices and ensures offline data is stored and automatically updated when online.
 
-## Get started
+## Features
+- **Offline-First**: Uses Expo SQLite for local storage.
+- **Real-Time Sync**: Firebase Realtime Database keeps data in sync.
+- **TinyBase Integration**: Efficient local state management.
+- **Cross-Platform**: Runs on Android, iOS, and Web via Expo.
 
-1. Install dependencies
-
-   ```bash
+## Installation
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/your-username/local-test-own.git
+   cd local-test-own
+   ```
+2. Install dependencies:
+   ```sh
    npm install
    ```
-
-2. Start the app
-
-   ```bash
-    npx expo start
+3. Start the development server:
+   ```sh
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+## Available Scripts
+- `npm start` – Run the app.
+- `npm run android` – Start on Android.
+- `npm run ios` – Start on iOS.
+- `npm run web` – Start on Web.
+- `npm test` – Run Jest tests.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Technologies Used
+- **React Native**
+- **Expo**
+- **TinyBase**
+- **Firebase Realtime Database**
+- **Expo SQLite**
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## License
+MIT License
 
-## Get a fresh project
+---
 
-When you're ready, run:
+> **Note:** Update Firebase config in your project before running the app and include `.env` values.
 
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
