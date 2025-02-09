@@ -1,4 +1,4 @@
-# Local-Test-Own
+# Local-First-React-Native-App
 
 ## Overview
 This is a **React Native** offline-first task management app using **TinyBase**, **Firebase Realtime Database**, and **Expo SQLite**. It supports real-time sync across devices and ensures offline data is stored and automatically updated when online.
