@@ -39,7 +39,9 @@ This is a **React Native** offline-first task management app using **TinyBase**,
 - **Expo SQLite**
 
 ## App Preview
-![App Preview](https://github.com/rahadkc/local-first-React-native-notes/blob/main/assets/images/app-preview.gif)
+
+<img src="https://github.com/rahadkc/local-first-React-native-notes/blob/main/assets/images/app-preview.gif" alt="app-preview" width="700"/>
+
 
 ## License
 MIT License
